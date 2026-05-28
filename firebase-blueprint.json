@@ -1,0 +1,95 @@
+{
+  "entities": {
+    "Event": {
+      "title": "Event",
+      "description": "A school event or holiday.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "month": { "type": "string" },
+        "dates": { "type": "object" },
+        "isAllMonth": { "type": "boolean" },
+        "onCalendar": { "type": "boolean" },
+        "onSocialMedia": { "type": "boolean" },
+        "announced": { "type": "boolean" },
+        "announcementText": { "type": "string" },
+        "graphicUrl": { "type": "string" },
+        "isCompleted": { "type": "boolean" },
+        "speaker": { "type": "string" }
+      },
+      "required": ["id", "name", "month"]
+    },
+    "AssemblyAssignment": {
+      "title": "Assembly Assignment",
+      "description": "Weekly assembly assignment details.",
+      "type": "object",
+      "properties": {
+        "thursdayDate": { "type": "string", "format": "date" },
+        "speaker": { "type": "string" },
+        "speakerEmail": { "type": "string", "format": "email" },
+        "emailAssignee": { "type": "string" },
+        "emailAssigneeEmail": { "type": "string", "format": "email" },
+        "isCancelled": { "type": "boolean" }
+      },
+      "required": ["thursdayDate"]
+    },
+    "MonthlyAssignments": {
+      "title": "Monthly Assignments",
+      "description": "Monthly responsibility assignments.",
+      "type": "object",
+      "properties": {
+        "calendarAssignee": { "type": "string" },
+        "calendarAssigneeEmail": { "type": "string", "format": "email" },
+        "isCalendarUpdated": { "type": "boolean" },
+        "socialMediaAssignee": { "type": "string" },
+        "socialMediaAssigneeEmail": { "type": "string", "format": "email" },
+        "isSocialMediaSent": { "type": "boolean" }
+      }
+    },
+    "Person": {
+      "title": "Person",
+      "description": "A person in the directory with their email address.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "AttendanceRecord": {
+      "title": "Attendance Record",
+      "description": "Daily attendance record.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "presentIds": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["date", "presentIds"]
+    }
+  },
+  "firestore": {
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Collection of all events."
+    },
+    "/assignments/{dateStr}": {
+      "schema": "AssemblyAssignment",
+      "description": "Weekly assembly assignments indexed by date string (YYYY-MM-DD)."
+    },
+    "/monthlyAssignments/{monthKey}": {
+      "schema": "MonthlyAssignments",
+      "description": "Monthly assignments indexed by month key (YYYY-MM)."
+    },
+    "/people/{personId}": {
+      "schema": "Person",
+      "description": "Directory of people and their email addresses."
+    },
+    "/attendance/{date}": {
+      "schema": "AttendanceRecord",
+      "description": "Daily attendance records indexed by date."
+    }
+  }
+}

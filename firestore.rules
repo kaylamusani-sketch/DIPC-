@@ -1,0 +1,155 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: events
+// Document ID: eventId
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - description: string (optional)
+//   - month: string (required)
+//   - dates: map (optional)
+//   - isAllMonth: bool (optional)
+//   - onCalendar: bool (optional)
+//   - onSocialMedia: bool (optional)
+//   - announced: bool (optional)
+//   - announcementText: string (optional)
+//   - graphicUrl: string (optional)
+//   - isCompleted: bool (optional)
+//   - speaker: string (optional)
+//
+// Collection: assignments
+// Document ID: dateStr (YYYY-MM-DD)
+// Fields:
+//   - thursdayDate: string (required, YYYY-MM-DD)
+//   - speaker: string (optional)
+//   - speakerEmail: string (optional, email)
+//   - emailAssignee: string (optional)
+//   - emailAssigneeEmail: string (optional, email)
+//   - isCancelled: bool (optional)
+//
+// Collection: monthlyAssignments
+// Document ID: monthKey (YYYY-MM)
+// Fields:
+//   - calendarAssignee: string (optional)
+//   - calendarAssigneeEmail: string (optional, email)
+//   - isCalendarUpdated: bool (optional)
+//   - socialMediaAssignee: string (optional)
+//   - socialMediaAssigneeEmail: string (optional, email)
+//   - isSocialMediaSent: bool (optional)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        request.auth.token.email.matches("(?i)kaylamusani@gmail.com");
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && (email == "" || email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"));
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
+    function isValidMonthKey(monthKey) {
+      return monthKey is string && monthKey.matches("^\\d{4}-\\d{1,2}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    match /people/{personId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /attendance/{date} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    function isValidEvent(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() < 50 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.month is string &&
+             (!('description' in data) || (data.description is string && data.description.size() < 1000)) &&
+             (!('announcementText' in data) || (data.announcementText is string && data.announcementText.size() < 2000)) &&
+             (!('graphicUrl' in data) || (data.graphicUrl is string && data.graphicUrl.size() < 500)) &&
+             (!('speaker' in data) || (data.speaker is string && data.speaker.size() < 100)) &&
+             (!('speakerEmail' in data) || (data.speakerEmail is string && isValidEmail(data.speakerEmail))) &&
+             (!('isEmailSent' in data) || data.isEmailSent == null || data.isEmailSent is bool);
+    }
+
+    function isValidAssignment(data) {
+      return (!('thursdayDate' in data) || data.thursdayDate == null || isValidDateString(data.thursdayDate)) &&
+             (!('speaker' in data) || data.speaker == null || (data.speaker is string && data.speaker.size() < 100)) &&
+             (!('speakerEmail' in data) || data.speakerEmail == null || isValidEmail(data.speakerEmail)) &&
+             (!('emailAssignee' in data) || data.emailAssignee == null || (data.emailAssignee is string && data.emailAssignee.size() < 100)) &&
+             (!('emailAssigneeEmail' in data) || data.emailAssigneeEmail == null || isValidEmail(data.emailAssigneeEmail)) &&
+             (!('isCancelled' in data) || data.isCancelled == null || data.isCancelled is bool) &&
+             (!('isEmailSent' in data) || data.isEmailSent == null || data.isEmailSent is bool);
+    }
+
+    function isValidMonthlyAssignment(data) {
+      return (!('calendarAssignee' in data) || data.calendarAssignee == null || (data.calendarAssignee is string && data.calendarAssignee.size() < 100)) &&
+             (!('calendarAssigneeEmail' in data) || data.calendarAssigneeEmail == null || isValidEmail(data.calendarAssigneeEmail)) &&
+             (!('isCalendarUpdated' in data) || data.isCalendarUpdated == null || data.isCalendarUpdated is bool) &&
+             (!('isCalendarEmailSent' in data) || data.isCalendarEmailSent == null || data.isCalendarEmailSent is bool) &&
+             (!('socialMediaAssignee' in data) || data.socialMediaAssignee == null || (data.socialMediaAssignee is string && data.socialMediaAssignee.size() < 100)) &&
+             (!('socialMediaAssigneeEmail' in data) || data.socialMediaAssigneeEmail == null || isValidEmail(data.socialMediaAssigneeEmail)) &&
+             (!('isSocialMediaSent' in data) || data.isSocialMediaSent == null || data.isSocialMediaSent is bool) &&
+             (!('isSocialMediaEmailSent' in data) || data.isSocialMediaEmailSent == null || data.isSocialMediaEmailSent is bool);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidEvent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /assignments/{dateStr} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidAssignment(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /monthlyAssignments/{monthKey} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidMonthlyAssignment(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
